@@ -14,7 +14,7 @@ for i in tds_files:
 
 
 draw_width = 640
-curr_image = tds_images[0]
+curr_image = tds_images[1]
 image_file=Image.open(f'{tds_basepath}{curr_image}')
 #image_file=Image.open('/darmok/data/tds-v0.0.2/dfb3983c260289ea.jpg')
 image_width, image_height = image_file.size
@@ -42,16 +42,29 @@ def modify_annotation(label, array):
     annotation_text.insert(END, str(array))
 #    annotate(str(array))
 
-def load_next_sample(curr_image, image_file, anno):
+def load_next_sample(curr_image, image_file, anno, forward=True):
     index = tds_images.index(curr_image)
-    if index == tds_images[-1]:
-        pass
+    breakout = False
+    print(f'moving from {index}')
+    if forward:
+#        direction_modifier = 1
+        if index == -1:
+            print("END OF SET")
+            breakout = True
+        n_i = index + 1
     else:
-        n_i = index+1
+#        direction_modifier = -1
+        if index == 0:
+            print("START OF SET")
+            breakout = True
+        n_i = index - 1
+    print(f"shift from {index} to {n_i}.")
     anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
     print(f"{anno_file_path}: {anno}")
     with open(anno_file_path, 'w') as f:
         f.write(str(anno))
+    if breakout:
+        return 0
     curr_anno_file = f"{tds_basepath}{tds_images[n_i][:-3]}txt"
 #    anno = ""
     fileopen_mode = 'r' if os.path.exists(curr_anno_file) else 'w+'
@@ -85,6 +98,7 @@ def load_next_sample(curr_image, image_file, anno):
     label.configure(image=image)
     label.image = image
     root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file: load_next_sample(curr_image, image_file, anno))
+    root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, False))
     print(f"{tds_basepath}{curr_image}: {draw_width}x{draw_height}")
 
 
@@ -126,7 +140,8 @@ for i in tds_labels:
     root.bind(tds_key_str, lambda event=i, i=i, anno=anno: modify_annotation(i, anno))
 
 root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno))
-root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_prev_sample(curr_image, image_file, anno))
+root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, False))
+load_next_sample(curr_image, image_file, anno, False)
 print(tds_buttons)
 #button=Button(root,text='Annotate',command=annotate)
 #button.pack()
