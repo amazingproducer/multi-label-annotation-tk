@@ -50,12 +50,15 @@ def load_next_sample(curr_image, image_file, anno):
         n_i = index+1
     anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
     print(f"{anno_file_path}: {anno}")
-    with open(anno_file_path, 'w+') as f:
+    with open(anno_file_path, 'w') as f:
         f.write(str(anno))
     curr_anno_file = f"{tds_basepath}{tds_images[n_i][:-3]}txt"
 #    anno = ""
-    with open(curr_anno_file, "w+") as f:
+    fileopen_mode = 'r' if os.path.exists(curr_anno_file) else 'w+'
+    with open(curr_anno_file, fileopen_mode) as f:
+        print(fileopen_mode)
         checkval = f.read()
+        print(checkval)
         if checkval:
             anno = json.loads(checkval)
         else:
@@ -85,11 +88,13 @@ def load_next_sample(curr_image, image_file, anno):
     print(f"{tds_basepath}{curr_image}: {draw_width}x{draw_height}")
 
 
-def load_prev_sample(index, img_set):
+def load_prev_sample(curr_image, image_file, anno):
+    index = tds_images.index(curr_image)
     if index == 0:
         pass
     else:
         p_i = index-1
+    print("doot doot from the prev_sample function")
     
 
 def bind_nav(index, img_set):
@@ -121,6 +126,7 @@ for i in tds_labels:
     root.bind(tds_key_str, lambda event=i, i=i, anno=anno: modify_annotation(i, anno))
 
 root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno))
+root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_prev_sample(curr_image, image_file, anno))
 print(tds_buttons)
 #button=Button(root,text='Annotate',command=annotate)
 #button.pack()
