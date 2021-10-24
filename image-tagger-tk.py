@@ -16,7 +16,6 @@ for i in tds_files:
 draw_width = 640
 curr_image = tds_images[0]
 image_file=Image.open(f'{tds_basepath}{curr_image}')
-#image_file=Image.open('/darmok/data/tds-v0.0.2/dfb3983c260289ea.jpg')
 image_width, image_height = image_file.size
 print(f"Image dimensions: {image_width},{image_height}")
 draw_height = int(draw_width * image_height / image_width)
@@ -40,15 +39,15 @@ def modify_annotation(label, array):
     print(label, array)
     annotation_text.delete('1.0', END)
     annotation_text.insert(END, str(array))
-#    annotate(str(array))
 
-def load_next_sample(curr_image, image_file, anno, forward=True):
+def load_next_sample(curr_image, image_file, anno, forward=True, ignore_existing=False):
     index = tds_images.index(curr_image)
     breakout = False
     print(f'moving from {index}')
+    n_i = 0
     if forward:
 #        direction_modifier = 1
-        if index == -1:
+        if tds_images[index] == tds_images[-1]:
             print("END OF SET")
             breakout = True
         n_i = index + 1
@@ -58,6 +57,18 @@ def load_next_sample(curr_image, image_file, anno, forward=True):
             print("START OF SET")
             breakout = True
         n_i = index - 1
+    if ignore_existing:
+        anno_list = []
+        for i in os.listdir(tds_basepath):
+            if i.endswith('.txt'):
+                anno_list.append(i)
+        print(f"Found {len(anno_list)} annotations.")
+        for i in range(len(tds_images)):
+            checkpath = f"{tds_images[i][:-3]}txt"
+            print(f"looking for{checkpath}")
+            if checkpath not in anno_list:
+                n_i = i
+                break
     print(f"shift from {index} to {n_i}.")
     anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
     print(f"{anno_file_path}: {anno}")
@@ -66,7 +77,6 @@ def load_next_sample(curr_image, image_file, anno, forward=True):
     if breakout:
         return 0
     curr_anno_file = f"{tds_basepath}{tds_images[n_i][:-3]}txt"
-#    anno = ""
     fileopen_mode = 'r' if os.path.exists(curr_anno_file) else 'w+'
     with open(curr_anno_file, fileopen_mode) as f:
         print(fileopen_mode)
@@ -93,39 +103,17 @@ def load_next_sample(curr_image, image_file, anno, forward=True):
     image_width, image_height = image_file.size
     draw_height = int(draw_width * image_height / image_width)
     image_file=Image.open(f'{tds_basepath}{curr_image}')
-#    image_file=Image.open('/darmok/data/tds-v0.0.2/0a110bca42890ac4.jpg')
     image=ImageTk.PhotoImage(image_file.resize((draw_width,draw_height)))
     label.configure(image=image)
     label.image = image
     root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file: load_next_sample(curr_image, image_file, anno))
-    root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, False))
+    root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, forward=False))
+    root.bind('<End>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, ignore_existing=True))
     print(f"{tds_basepath}{curr_image}: {draw_width}x{draw_height}")
-
-
-def load_prev_sample(curr_image, image_file, anno):
-    index = tds_images.index(curr_image)
-    if index == 0:
-        pass
-    else:
-        p_i = index-1
-    print("doot doot from the prev_sample function")
-    
-
-def bind_nav(index, img_set):
-    pass
-
-#def annotate(annotation):
-#    canvas.itemconfig(annotation_text,text=annotation)
-
 
 root=Tk()
 
-#canvas=Canvas(root)
-#canvas.pack(fill='both',expand=True)
 image=ImageTk.PhotoImage(image_file.resize((draw_width, draw_height)))
-# image_portal = canvas.create_image(150,150,image=image)
-# canvas.img_obj = image
-# print(canvas.__dict__)
 label = Label(image=image)
 label.image = image
 label.pack()
@@ -158,9 +146,7 @@ for i in tds_labels:
 
 root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno))
 root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, False))
+root.bind('<End>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, ignore_existing=True))
 print(tds_buttons)
-#button=Button(root,text='Annotate',command=annotate)
-#button.pack()
-
 
 root.mainloop()
