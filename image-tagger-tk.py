@@ -1,10 +1,13 @@
 from tkinter import *
+from tkinter import simpledialog
 from PIL import Image,ImageTk
 import os
 import json
+from gc import collect as gc
 
 
-tds_basepath = "/darmok/data/tds-v0.0.2/"
+#tds_basepath = "/darmok/data/tds-v0.0.2/"
+tds_basepath = '/darmok/data/tds-v0.0.3.easy/'
 tds_files = os.listdir(tds_basepath)
 tds_labels = ["vehicle", "person", "tundra-parked"]
 tds_images = []
@@ -40,7 +43,30 @@ def modify_annotation(label, array):
     annotation_text.delete('1.0', END)
     annotation_text.insert(END, str(array))
 
-def load_next_sample(curr_image, image_file, anno, forward=True, ignore_existing=False):
+def get_jump_target():
+    jump_target = None
+    while not jump_target:
+        jump_target = simpledialog.askinteger("Jump to Index", "Enter index value")
+    return [jump_target, True]
+
+def del_sample(curr_image, image_file, anno):
+    """Delete an image file and its annotation file (if it exists) from the set.
+        Amends the dataset length and intelligently loads the next sample."""
+    index = tds_images.index(curr_image)
+    anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
+    image_file_path = f'{tds_basepath}{curr_image}'
+    os.remove(anno_file_path)
+    os.remove(image_file_path)
+    tds_images.pop(index)
+    if index > len(tds_images):
+        index = len(tds_images)
+    curr_image = tds_images[index]
+    image_file=Image.open(f'{tds_basepath}{curr_image}')
+    anno = [0,0,0]
+    load_next_sample(curr_image, image_file, anno, target=[index,True])
+
+def load_next_sample(curr_image, image_file, anno, forward=True, ignore_existing=False, target=[0,False]):
+    gc()
     index = tds_images.index(curr_image)
     breakout = False
     print(f'moving from {index}')
@@ -69,13 +95,16 @@ def load_next_sample(curr_image, image_file, anno, forward=True, ignore_existing
             if checkpath not in anno_list:
                 n_i = i
                 break
-    print(f"shift from {index} to {n_i}.")
-    anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
-    print(f"{anno_file_path}: {anno}")
-    with open(anno_file_path, 'w') as f:
-        f.write(str(anno))
-    if breakout:
-        return 0
+    if target[1]:
+        n_i = target[0]
+    else:
+        print(f"shift from {index} to {n_i}.")
+        anno_file_path = f"{tds_basepath}{tds_images[index][:-3]}txt"
+        print(f"{anno_file_path}: {anno}")
+        with open(anno_file_path, 'w') as f:
+            f.write(str(anno))
+        if breakout:
+            return 0
     curr_anno_file = f"{tds_basepath}{tds_images[n_i][:-3]}txt"
     fileopen_mode = 'r' if os.path.exists(curr_anno_file) else 'w+'
     with open(curr_anno_file, fileopen_mode) as f:
@@ -109,6 +138,8 @@ def load_next_sample(curr_image, image_file, anno, forward=True, ignore_existing
     root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file: load_next_sample(curr_image, image_file, anno))
     root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, forward=False))
     root.bind('<End>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, ignore_existing=True))
+    root.bind('<Delete>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: del_sample(curr_image, image_file, anno))
+    root.bind('<Insert>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, target=get_jump_target()))
     print(f"{tds_basepath}{curr_image}: {draw_width}x{draw_height}")
 
 root=Tk()
@@ -147,6 +178,8 @@ for i in tds_labels:
 root.bind('<space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno))
 root.bind('<Shift-KeyPress-space>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, False))
 root.bind('<End>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, ignore_existing=True))
+root.bind('<Delete>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: del_sample(curr_image, image_file, anno))
+root.bind('<Insert>', lambda event=None, curr_image=curr_image, image_file=image_file, anno=anno: load_next_sample(curr_image, image_file, anno, target=get_jump_target()))
 print(tds_buttons)
 
 root.mainloop()
